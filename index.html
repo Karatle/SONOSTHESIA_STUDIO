@@ -308,6 +308,7 @@ function updateDataSynth() {
 
 		sk.settingsSynth.master.volume = sk.synthMaster.volKnob.knobPos
 		sk.settingsSynth.master.pan = sk.synthMaster.panKnob.knobPos
+		sk.settingsSynth.master.slide = sk.synthMaster.slideKnob.knobPos
 		sk.settingsSynth.master.noteLength = sequencer.sequencerTracks[i].noteLengthKnob.knobPos
 
 		sk.settingsSynth.source.shapeOsc = sk.source.waveType.shape
@@ -861,6 +862,7 @@ class Synthekinda {
 			master: {
 				volume: .5,
 				pan: .5,
+				slide: 0.01,
 				noteLength: .5
 			},
 
@@ -964,6 +966,7 @@ class Synthekinda {
 		//values to cache"""""""""""""""""""""""""""""""""""
 		this.volKnobMap = sqrt(1 - pow(this.synthMaster.volKnob.knobVal - 1, 2)) //ease volKnob
 		this.synth.pan = map(this.synthMaster.panKnob.knobVal, 0, 1, -1, 1)
+		this.synth.slide = map(this.synthMaster.slideKnob.knobVal, 0, 1, 0.01, 3)
 		//"""""""""""""""""""""""""""""""""""
 
 		this.masterVolControl = map(this.volKnobMap, 0, 1, 60, 0)
@@ -976,7 +979,11 @@ class Synthekinda {
 
 		//values to cache"""""""""""""""""""""""""""""""""""
 		this.synth.osc.type = this.synth.shapes[this.source.waveType.shape]
+		this.synth.osc2.type = this.synth.shapes[this.source.waveType.shape]
+		this.synth.osc3.type = this.synth.shapes[this.source.waveType.shape]
 		this.synth.osc.modulationType = this.synth.shapes[this.source.modType.shape]
+		this.synth.osc2.modulationType = this.synth.shapes[this.source.modType.shape]
+		this.synth.osc3.modulationType = this.synth.shapes[this.source.modType.shape]
 		this.synth.FMmodIndex = map(this.source.modKnob.knobVal, 0, 1, 0, 4)
 		this.synth.FMharmonicity = map(this.source.harmonicityKnob.knobVal, 0, 1, 1, 1.5)
 		this.synth.noise.type = this.synth.noiseShapes[this.source.noise.noiseShape]
@@ -1245,6 +1252,7 @@ class Synthekinda {
 
 		this.synthMaster.volKnob.knobPos = this.settingsSynth.master.volume
 		this.synthMaster.panKnob.knobPos = this.settingsSynth.master.pan
+		this.synthMaster.slideKnob.knobPos = this.settingsSynth.master.slide
 		sequencer.sequencerTracks[this.synthId].noteLengthKnob.knobPos = this.settingsSynth.master.noteLength
 
 		this.source.waveType.shape = this.settingsSynth.source.shapeOsc
@@ -1322,6 +1330,7 @@ class SynthAudio {
 		this.octave = 1
 		this.chordMode = 0
 		this.pan = 0
+		this.slide = 0.01
 
 		this.masterVolume
 		this.oscVolume
@@ -1348,6 +1357,10 @@ class SynthAudio {
 
 		this.distortionAmount
 		this.distortionWET
+
+		this.mute = false
+		this.solo = false
+		this.externalMute = false
 
 		//–––––––––––––––––––––––––––effects––––––––––––––––––––
 		this.reverb = new Tone.Freeverb({
@@ -1509,6 +1522,10 @@ class SynthAudio {
 		//–––––––––––––––––––––––––––val osc––––––––––––––––––––
 		this.osc.modulationIndex.value = this.FMmodIndex
 		this.osc.harmonicity.value = this.FMharmonicity
+		this.osc2.modulationIndex.value = this.FMmodIndex
+		this.osc2.harmonicity.value = this.FMharmonicity
+		this.osc3.modulationIndex.value = this.FMmodIndex
+		this.osc3.harmonicity.value = this.FMharmonicity
 
 		this.volOsc.volume.value = this.oscVolume
 		
@@ -1576,15 +1593,26 @@ class SynthAudio {
 			this.volOsc3.volume.rampTo(this.oscVolume, .01)
 		}
 		
-		this.osc.frequency.rampTo(this.freq * this.octave, 0.01)
-		this.osc2.frequency.rampTo(this.freq2 * this.octave, 0.01)
-		this.osc3.frequency.rampTo(this.freq3 * this.octave, 0.01)
+		this.osc.frequency.rampTo(this.freq * this.octave, this.slide)
+		this.osc2.frequency.rampTo(this.freq2 * this.octave, this.slide)
+		this.osc3.frequency.rampTo(this.freq3 * this.octave, this.slide)
 
 		//–––––––––––––––––––––––––––GATE––––––––––––––––––––
+		if(this.mute == true && this.solo == false){
+			this.osc.stop()
+			this.osc2.stop()
+			this.osc3.stop()
+			this.noise.stop()
+		}else{
+			this.osc.start()
+			this.osc2.start()
+			this.osc3.start()
+			this.noise.start()
+		}
 
 		if(this.gate) {
-			this.lfo1.stop()
-			this.lfo1.start()
+			// this.lfo1.stop()
+			// this.lfo1.start()
 			this.filterEnv.triggerAttackRelease(this.noteLengthFilter)
 			this.ampEnv.triggerAttackRelease(this.noteLengthVol)
 		}
@@ -2556,14 +2584,16 @@ class SynthMaster {
 		this.posy = posy
 		this.posx = posx
 		this.label = label
-		this.volKnob = new Knob(this.posx + standardUnit * 1.7, this.posy - standardUnit * .15, 2, 2, "SYNTH VOLUME", .5)
-		this.panKnob = new Knob(this.posx + standardUnit * .3, this.posy - standardUnit * .2, 1.5, 2, "SYNTH PAN", 0.5)
-		this.waveFormDraw = new WaveFormDraw(this.posx + standardUnit * 3, this.posy, scaleUniv, scaleUniv, "SYNTH VOLUME")
+		this.volKnob = new Knob(this.posx + standardUnit * 2.6, this.posy - standardUnit * .15, 2, 2, "SYNTH VOLUME", .5)
+		this.panKnob = new Knob(this.posx + standardUnit * 1.25, this.posy - standardUnit * .2, 1.5, 2, "SYNTH PAN", 0.5)
+		this.slideKnob = new Knob(this.posx + standardUnit * .1, this.posy - standardUnit * .2, 1.5, 2, "SLIDE", 0)
+		this.waveFormDraw = new WaveFormDraw(this.posx + standardUnit * 3.8, this.posy, scaleUniv, scaleUniv, "SYNTH VOLUME")
 
 	}
 	display() {
 		this.volKnob.display()
 		this.panKnob.display()
+		this.slideKnob.display()
 		this.waveFormDraw.display()
 	}
 }
@@ -3315,7 +3345,7 @@ class Sequencer {
 
 
 		for(let i = 0; i < 4; i++) {
-			this.sequencerTracks.push(new SequencerTrack(this.posx - standardUnit * .2, this.posy, this.sizew, this.sizew, this.seqUnitSize, i))
+			this.sequencerTracks.push(new SequencerTrack(this.posx - standardUnit * .6, this.posy, this.sizew, this.sizew, this.seqUnitSize, i))
 		}
 		for(let i = 0; i < this.sequencerTracks.length; i++) {
 			this.sequencerData.trackData.push(this.sequencerTracks[i].trackData)
@@ -3366,6 +3396,14 @@ class Sequencer {
 			this.s.modeSelect = this.seqModeSelect.modeSelect
 		}
 
+		for(let i = 0; i < 4; i++){
+			if(this.sequencerTracks[i].soloButton.active == true){
+				for(let sk of synthekindas){
+					sk.synth.mute = true
+				}
+			}
+		}
+
 		stroke(255, 0, 0)
 
 
@@ -3408,6 +3446,7 @@ class SequencerTrack {
 		this.seqLength = 32
 		this.noteCount = 40
 
+		// this.seqUnitSize = width / 60
 		this.seqUnitSize = width / 60
 
 		this.notes = []
@@ -3447,8 +3486,11 @@ class SequencerTrack {
 			}
 			this.unitBrightnessAltCounter++
 
+			// this.sequencerUnit.push(new SequencerUnit((i * this.seqUnitSize) - width / 2 + this.posx + standardUnit, this.posy + standardUnit * (.6 * this.trackID) - standardUnit * .4, this.sizew, this.sizew, this.seqUnitSize, this.unitBrightness))
 			this.sequencerUnit.push(new SequencerUnit((i * this.seqUnitSize) - width / 2 + this.posx + standardUnit, this.posy + standardUnit * (.6 * this.trackID) - standardUnit * .4, this.sizew, this.sizew, this.seqUnitSize, this.unitBrightness))
 		}
+		this.muteButton = new SequencerButton((32.3 *this.seqUnitSize) - width / 2 + this.posx + standardUnit, this.posy + standardUnit * (.6 * this.trackID) - standardUnit * .4, scaleUniv, scaleUniv, "MUTE", standardUnit * 1.2, standardUnit * .7, true, color(0, 200, 255))
+		this.soloButton = new SequencerButton((32.3 *this.seqUnitSize) - width / 2 + this.posx + standardUnit + standardUnit * .7, this.posy + standardUnit * (.6 * this.trackID) - standardUnit * .4, scaleUniv, scaleUniv, "SOLO", standardUnit * 1.2, standardUnit * .7, true, color(255, 200, 100))
 
 		this.trackData = { active: [], note: [], chord: [] }
 		this.trackDataActive = []
@@ -3465,6 +3507,21 @@ class SequencerTrack {
 
 	display() {
 		push()
+
+		this.muteButton.display()
+		this.soloButton.display()
+		if(this.muteButton.active == true){
+			synthekindas[this.trackID].synth.mute = true
+		}else{
+			synthekindas[this.trackID].synth.mute = false
+		}
+		if(this.soloButton.active == true){
+			synthekindas[this.trackID].synth.solo = true
+			//have to mute all synths in draw
+		}else{
+			synthekindas[this.trackID].synth.solo = false
+		}
+
 		fill(this.brightnessInactive)
 		if(synthIndex == this.trackID){
 			fill(this.brightnessActive)
@@ -3571,6 +3628,63 @@ class SequencerTrack {
 			this.sequencerUnit[i].note = this.trackData.note[i]
 			this.sequencerUnit[i].chord = this.trackData.chord[i]
 		}
+	}
+}
+
+class SequencerButton {
+
+	constructor(posx, posy, sizew, sizeh, label, unitSizeX, unitSizeY, toggle, activeColor) {
+		this.sizew = sizew
+		this.sizeh = sizeh
+		this.posx = posx
+		this.posy = posy
+		this.label = label
+		this.unitSizeX = unitSizeX
+		this.unitSizeY = unitSizeY
+		this.toggle = toggle
+		this.stroke = 1
+		this.active = false
+		this.activeColor = activeColor
+	}
+
+	display() {
+		push()
+		translate(this.posx, this.posy)
+		rectMode(CENTER)
+		textAlign(CENTER)
+
+		if(mouseDown) {
+			if(dist(mouseX - width / 2, mouseY - height / 2, this.posx, this.posy) < standardUnit * .5 * this.sizew) {
+				if(this.toggle == true){
+					this.active = !this.active
+				}else{
+					this.active = true
+				}
+			}
+		}
+		if(mouseUp == true && this.toggle == false) {
+			this.active = false
+		}
+		fill(0)
+		stroke(190)
+		strokeWeight(this.stroke)
+		this.activeColor.setAlpha(255)
+		if(this.active == true) {
+			stroke(this.activeColor)
+			this.activeColor.setAlpha(80)
+			fill(this.activeColor)
+			
+		}
+		rect(0, 0, this.unitSizeX * this.sizew, this.unitSizeY * this.sizew)
+		// blendMode(DIFFERENCE)
+
+		noStroke()
+		fill(190)
+		if(this.active == true){
+			fill(255)
+		}
+		text(this.label, 0, 0 + standardUnit * .08)
+		pop()
 	}
 }
 

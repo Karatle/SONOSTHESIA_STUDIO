@@ -36,7 +36,8 @@
       "master": {
         "volume": 0.7380000000000002,
         "pan": 0.6890000000000002,
-        "noteLength": 0.5
+        "noteLength": 0.5,
+        "slide": 0
       },
       "source": {
         "shapeOsc": 1,
@@ -108,7 +109,8 @@
       "master": {
         "volume": 0.7240000000000002,
         "pan": 0.5,
-        "noteLength": 0.5
+        "noteLength": 0.5,
+        "slide": 0
       },
       "source": {
         "shapeOsc": 1,
@@ -180,7 +182,8 @@
       "master": {
         "volume": 0.3430000000000001,
         "pan": 0.22699999999999976,
-        "noteLength": 0.5
+        "noteLength": 0.5,
+        "slide": 0
       },
       "source": {
         "shapeOsc": 1,
@@ -252,7 +255,8 @@
       "master": {
         "volume": 0.5489999999999998,
         "pan": 0.6680000000000001,
-        "noteLength": 0.5
+        "noteLength": 0.5,
+        "slide": 0
       },
       "source": {
         "shapeOsc": 2,
