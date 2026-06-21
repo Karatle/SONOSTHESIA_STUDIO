@@ -240,9 +240,9 @@ function draw() {
 	}
 
 	fileMenu.display()
-	
 	mouseDown = false
 	init = false
+
 	}
 	
 function keyPressed() {
@@ -1358,8 +1358,16 @@ class SynthAudio {
 		this.distortionAmount
 		this.distortionWET
 
+		this.muteVol = 240
+
 		this.mute = false
 		this.solo = false
+		this.mutePulse = 2
+		this.soloPulse = 2
+		this.unMute = false
+
+		this.extSoloPulse = 2
+
 		this.externalMute = false
 
 		//–––––––––––––––––––––––––––effects––––––––––––––––––––
@@ -1520,6 +1528,14 @@ class SynthAudio {
 
 	display() {
 		//–––––––––––––––––––––––––––val osc––––––––––––––––––––
+		
+		if(this.mute == true && this.solo == false){
+			this.muteVol = 240
+		}else{
+			this.muteVol = 0
+		}
+
+
 		this.osc.modulationIndex.value = this.FMmodIndex
 		this.osc.harmonicity.value = this.FMharmonicity
 		this.osc2.modulationIndex.value = this.FMmodIndex
@@ -1527,9 +1543,9 @@ class SynthAudio {
 		this.osc3.modulationIndex.value = this.FMmodIndex
 		this.osc3.harmonicity.value = this.FMharmonicity
 
-		this.volOsc.volume.value = this.oscVolume
+		this.volOsc.volume.value = this.oscVolume - this.muteVol
 		
-		this.volNoise.volume.value = this.noiseVolume
+		this.volNoise.volume.value = this.noiseVolume - this.muteVol
 		this.panning.pan.value = this.pan
 
 		//–––––––––––––––––––––––––––val envelopes––––––––––––––––––––
@@ -1589,8 +1605,8 @@ class SynthAudio {
 			this.volOsc3.volume.rampTo(-240, .01)
 		} else {
 			
-			this.volOsc2.volume.rampTo(this.oscVolume, .01)
-			this.volOsc3.volume.rampTo(this.oscVolume, .01)
+			this.volOsc2.volume.rampTo(this.oscVolume - this.muteVol, .01)
+			this.volOsc3.volume.rampTo(this.oscVolume - this.muteVol, .01)
 		}
 		
 		this.osc.frequency.rampTo(this.freq * this.octave, this.slide)
@@ -1598,18 +1614,7 @@ class SynthAudio {
 		this.osc3.frequency.rampTo(this.freq3 * this.octave, this.slide)
 
 		//–––––––––––––––––––––––––––GATE––––––––––––––––––––
-		if(this.mute == true && this.solo == false){
-			this.osc.stop()
-			this.osc2.stop()
-			this.osc3.stop()
-			this.noise.stop()
-		}else{
-			this.osc.start()
-			this.osc2.start()
-			this.osc3.start()
-			this.noise.start()
-		}
-
+		
 		if(this.gate) {
 			// this.lfo1.stop()
 			// this.lfo1.start()
@@ -3336,6 +3341,9 @@ class Sequencer {
 		this.brightnessActive = 255
 		this.brightnessInactive = 100
 
+		this.soloCheck = false
+		this.soloCheckOld
+
 		this.sequencerData = {
 			sequencerSettings: {
 				bpm: 10,
@@ -3395,7 +3403,7 @@ class Sequencer {
 			this.s.noteKnobMapped = this.noteKnobMapped
 			this.s.modeSelect = this.seqModeSelect.modeSelect
 		}
-
+		
 		for(let i = 0; i < 4; i++){
 			if(this.sequencerTracks[i].soloButton.active == true){
 				for(let sk of synthekindas){
@@ -3405,7 +3413,6 @@ class Sequencer {
 		}
 
 		stroke(255, 0, 0)
-
 
 		pop()
 	}
@@ -3452,6 +3459,14 @@ class SequencerTrack {
 		this.notes = []
 		this.noteUp
 		this.noteDown
+
+		this.muteToggle = 2
+		this.muteToggleOld = 2
+		this.mute = false
+		this.soloToggle = 2
+		this.soloToggleOld = 2
+		this.solo = false
+		this.soloPulse = false
 
 		for(let i = 0; i < this.noteCount; i++) {
 			this.notes.push(32.70 * pow(2, i / 12)) // start at C#1
@@ -3510,6 +3525,7 @@ class SequencerTrack {
 
 		this.muteButton.display()
 		this.soloButton.display()
+		
 		if(this.muteButton.active == true){
 			synthekindas[this.trackID].synth.mute = true
 		}else{
