@@ -4221,7 +4221,7 @@ class FileMenu {
 			strokeWeight(2)
 			input.elt.click()
 		}
-		if(this.deleteButton.active == true){
+		if(this.deleteButton.active == true && this.dropDownUser.options[this.dropDownUser.selectedOption].name != "new"){
 			this.delete = true
 		}
 		if(this.delete == true){
